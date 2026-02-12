@@ -9,7 +9,7 @@ genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 twilio_client = Client(os.environ["TWILIO_SID"], os.environ["TWILIO_TOKEN"])
 
 def generer_ration_spirituelle():
-    model = genai.GenerativeModel('gemini-pro')
+   model = genai.GenerativeModel('gemini-1.5-flash')
     prompt = """
     Tu es l'Aumônier du QG Josué 1:8. 
     Génère un message de motivation biblique puissant en 3 langues : Français (FR), Portugais (PT), et Anglais (EN).
