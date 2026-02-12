@@ -1,0 +1,25 @@
+name: Automatisation Josue 1-8
+on:
+  schedule:
+    - cron: '30 5 * * *' # 5h30 du matin tous les jours
+  workflow_dispatch: # Pour le lancer manuellement
+
+jobs:
+  run_bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - run: pip install -r requirements.txt
+      - name: Execution
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TWILIO_SID: ${{ secrets.TWILIO_SID }}
+          TWILIO_TOKEN: ${{ secrets.TWILIO_TOKEN }}
+          TWILIO_NUMBER: ${{ secrets.TWILIO_NUMBER }}
+          TARGET_NUMBER: ${{ secrets.TARGET_NUMBER }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python bot_josue.py
