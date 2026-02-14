@@ -9,8 +9,8 @@ genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 twilio_client = Client(os.environ["TWILIO_SID"], os.environ["TWILIO_TOKEN"])
 
 def generer_ration_spirituelle():
-    # Utilisation du modèle 1.5 Flash (stable et rapide)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Test avec le nom de modèle universel
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
     
     prompt = """
     Tu es l'Aumônier du QG Josué 1:8. 
@@ -30,17 +30,20 @@ def executer_mission():
         # 1. Génération du message
         message = generer_ration_spirituelle()
         
-        # 2. Préparation de l'image (Sunrise/Mountaintop)
+        # 2. Préparation de l'image
         prompt_img = urllib.parse.quote("cinematic biblical sunrise, epic landscape, courage, high resolution")
         image_url = f"https://image.pollinations.ai/prompt/{prompt_img}?width=1024&height=1024&nologo=true"
 
-        # 3. Envoi Telegram
-        tg_token = os.environ.get("TELEGRAM_TOKEN")
-        tg_id = os.environ.get("TELEGRAM_CHAT_ID")
-        if tg_token and tg_id:
-            requests.post(f"https://api.telegram.org/bot{tg_token}/sendPhoto", 
-                          data={'chat_id': tg_id, 'caption': message},
-                          files={'photo': requests.get(image_url).content})
+        # 3. Envoi Telegram (facultatif si erreur)
+        try:
+            tg_token = os.environ.get("TELEGRAM_TOKEN")
+            tg_id = os.environ.get("TELEGRAM_CHAT_ID")
+            if tg_token and tg_id:
+                requests.post(f"https://api.telegram.org/bot{tg_token}/sendPhoto", 
+                              data={'chat_id': tg_id, 'caption': message},
+                              files={'photo': requests.get(image_url).content}, timeout=10)
+        except:
+            print("⚠️ Telegram non disponible")
 
         # 4. Envoi WhatsApp
         twilio_client.messages.create(
