@@ -9,32 +9,40 @@ genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 twilio_client = Client(os.environ["TWILIO_SID"], os.environ["TWILIO_TOKEN"])
 
 def generer_ration_spirituelle():
-    # Test avec le nom de modèle universel
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    # Liste de munitions (modèles) du plus récent au plus compatible
+    modeles_a_tester = [
+        'gemini-1.5-flash',
+        'gemini-pro',
+        'models/gemini-1.5-flash',
+        'models/gemini-pro'
+    ]
     
     prompt = """
     Tu es l'Aumônier du QG Josué 1:8. 
     Génère un message de motivation biblique puissant en 3 langues : Français (FR), Portugais (PT), et Anglais (EN).
-    
-    Structure pour chaque langue :
-    📖 VERSET DU JOUR (Référence et texte)
-    🛡️ MÉDITATION (2 phrases de leadership)
-    💡 CONSEIL TACTIQUE (1 phrase d'action)
+    Structure : 📖 VERSET DU JOUR, 🛡️ MÉDITATION, 💡 CONSEIL TACTIQUE.
     """
+
+    for nom_modele in modeles_a_tester:
+        try:
+            print(f"🔄 Tentative avec le modèle : {nom_modele}...")
+            model = genai.GenerativeModel(nom_modele)
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            print(f"⚠️ Échec avec {nom_modele}")
+            continue
     
-    response = model.generate_content(prompt)
-    return response.text
+    raise Exception("Aucun modèle Gemini n'est accessible avec cette clé API.")
 
 def executer_mission():
     try:
-        # 1. Génération du message
         message = generer_ration_spirituelle()
         
-        # 2. Préparation de l'image
         prompt_img = urllib.parse.quote("cinematic biblical sunrise, epic landscape, courage, high resolution")
         image_url = f"https://image.pollinations.ai/prompt/{prompt_img}?width=1024&height=1024&nologo=true"
 
-        # 3. Envoi Telegram (facultatif si erreur)
+        # Envoi Telegram
         try:
             tg_token = os.environ.get("TELEGRAM_TOKEN")
             tg_id = os.environ.get("TELEGRAM_CHAT_ID")
@@ -45,7 +53,7 @@ def executer_mission():
         except:
             print("⚠️ Telegram non disponible")
 
-        # 4. Envoi WhatsApp
+        # Envoi WhatsApp
         twilio_client.messages.create(
             from_=os.environ["TWILIO_NUMBER"],
             body=message,
@@ -53,10 +61,10 @@ def executer_mission():
             to=os.environ["TARGET_NUMBER"]
         )
         
-        print("✅ Mission accomplie : La ration spirituelle est livrée au Commandant.")
+        print("✅ Mission accomplie : La ration spirituelle est livrée.")
         
     except Exception as e:
-        print(f"❌ Erreur tactique : {str(e)}")
+        print(f"❌ Erreur tactique fatale : {str(e)}")
 
 if __name__ == "__main__":
     executer_mission()
