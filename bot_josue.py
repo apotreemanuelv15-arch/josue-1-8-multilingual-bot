@@ -9,33 +9,37 @@ def executer_mission():
     twilio_number = os.environ.get("TWILIO_NUMBER")
     target_number = os.environ.get("TARGET_NUMBER")
     
-    # Utilisation du nom long officiel 2026
-    modele_final = "models/gemini-1.5-flash"
-    url = f"https://generativelanguage.googleapis.com/v1beta/{modele_final}:generateContent?key={api_key}"
+    # On teste les 3 formats d'URL possibles en 2026
+    tests = [
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+    ]
     
-    payload = {
-        "contents": [{
-            "parts": [{"text": "Génère un message puissant de motivation chrétienne (Josué 1:8) en FR, EN, PT."}]
-        }]
-    }
+    payload = {"contents": [{"parts": [{"text": "Message court Josué 1:8"}]}]}
+    
+    print("🚀 Test de pénétration multi-canaux...")
 
-    print(f"📡 Offensive finale sur {modele_final}...")
+    for url in tests:
+        full_url = f"{url}?key={api_key}"
+        print(f"📡 Essai sur : {url}")
+        try:
+            res = requests.post(full_url, json=payload, timeout=15)
+            if res.status_code == 200:
+                print("✅ PERCÉE RÉUSSIE !")
+                message = res.json()['candidates'][0]['content']['parts'][0]['text']
+                
+                # Envoi Twilio
+                client = Client(twilio_sid, twilio_token)
+                client.messages.create(from_=twilio_number, body=message, to=target_number)
+                print("🏁 WhatsApp expédié !")
+                return
+            else:
+                print(f"❌ Échec ({res.status_code})")
+        except:
+            print("⚠️ Erreur réseau")
 
-    try:
-        response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, timeout=30)
-        
-        if response.status_code == 200:
-            message = response.json()['candidates'][0]['content']['parts'][0]['text']
-            print("✅ L'IA A RÉPONDU ! Connexion établie.")
-            
-            client = Client(twilio_sid, twilio_token)
-            client.messages.create(from_=twilio_number, body=message, to=target_number)
-            print("🏁 MESSAGE ENVOYÉ SUR WHATSAPP !")
-        else:
-            print(f"❌ Erreur Google : {response.text}")
-            
-    except Exception as e:
-        print(f"❌ Erreur système : {str(e)}")
+    print("🆘 Aucune porte ne s'est ouverte.")
 
 if __name__ == "__main__":
     executer_mission()
