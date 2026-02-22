@@ -8,55 +8,56 @@ def executer_mission():
     twilio_token = os.environ.get("TWILIO_TOKEN")
     twilio_number = os.environ.get("TWILIO_NUMBER")
     target_number = os.environ.get("TARGET_NUMBER")
-    
-    # Noms de modèles ultra-précis pour 2026
-    modeles_a_tester = [
-        "gemini-1.5-pro-002",
-        "gemini-1.5-flash-002",
-        "gemini-1.5-pro",
-        "gemini-2.0-flash-exp"
-    ]
-    
-    prompt = "Tu es l'Aumônier du QG Josué 1:8. Génère un message de motivation biblique puissant en 3 langues : Français (FR), Portugais (PT), et Anglais (EN). Structure : 📖 VERSET DU JOUR, 🛡️ MÉDITATION, 💡 CONSEIL TACTIQUE."
-    
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    headers = {'Content-Type': 'application/json'}
 
-    print("🎯 Lancement de la frappe de précision (v1beta)...")
-
-    message_ia = None
-    for modele in modeles_a_tester:
-        print(f"📡 Connexion au modèle : {modele}...")
-        # UTILISATION DE v1beta (indispensable pour les nouveaux comptes)
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{modele}:generateContent?key={api_key}"
+    print("🔍 Scan des modèles disponibles pour votre nouvelle clé...")
+    
+    # 1. On liste les modèles disponibles
+    list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+    
+    try:
+        res = requests.get(list_url)
+        models_data = res.json()
         
-        try:
-            response = requests.post(url, json=payload, headers=headers, timeout=30)
-            result = response.json()
-            
-            if response.status_code == 200:
-                message_ia = result['candidates'][0]['content']['parts'][0]['text']
-                print(f"✨ SUCCÈS ! Liaison établie avec {modele}.")
-                break
-            else:
-                erreur_msg = result.get('error', {}).get('message', 'Non spécifié')
-                print(f"❌ Rejet de {modele} : {erreur_msg}")
-        except Exception as e:
-            print(f"⚠️ Incident technique sur {modele} : {str(e)}")
+        if 'models' not in models_data:
+            print(f"❌ Impossible de lister les modèles : {models_data}")
+            return
 
-    if message_ia:
-        try:
+        # On cherche un modèle qui contient "gemini" et qui supporte "generateContent"
+        modeles_trouves = [
+            m['name'] for m in models_data['models'] 
+            if 'generateContent' in m.get('supportedMethods', [])
+        ]
+        
+        if not modeles_trouves:
+            print("❌ Aucun modèle compatible trouvé pour cette clé.")
+            return
+
+        print(f"✅ Modèles détectés : {modeles_trouves}")
+        
+        # 2. On tente de générer avec le premier modèle de la liste
+        choix = modeles_trouves[0]
+        print(f"🚀 Tentative de génération avec le modèle détecté : {choix}")
+        
+        prompt = "Tu es l'Aumônier du QG Josué 1:8. Génère un message de motivation biblique puissant en 3 langues : Français (FR), Portugais (PT), et Anglais (EN)."
+        gen_url = f"https://generativelanguage.googleapis.com/v1beta/{choix}:generateContent?key={api_key}"
+        
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        response = requests.post(gen_url, json=payload, headers={'Content-Type': 'application/json'})
+        result = response.json()
+
+        if response.status_code == 200:
+            message_ia = result['candidates'][0]['content']['parts'][0]['text']
+            print(f"✨ SUCCÈS ! Message généré par {choix}.")
+            
+            # 3. Envoi Twilio
             client = Client(twilio_sid, twilio_token)
-            client.messages.create(
-                from_=twilio_number,
-                body=message_ia,
-                to=target_number
-            )
-            print("🚀 MISSION RÉUSSIE : Message envoyé au QG !")
-        except Exception as e:
-            print(f"❌ Erreur finale Twilio : {str(e)}")
-    else:
-        print("🚩 ÉCHEC : Google bloque l'accès externe. Vérifiez si l'API Gemini est activée dans Google Cloud Console.")
+            client.messages.create(body=message_ia, from_=twilio_number, to=target_number)
+            print("🏁 MISSION RÉUSSIE : Message envoyé !")
+        else:
+            print(f"❌ Échec génération avec {choix} : {result}")
+
+    except Exception as e:
+        print(f"⚠️ Erreur système : {str(e)}")
 
 if __name__ == "__main__":
     executer_mission()
