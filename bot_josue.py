@@ -9,38 +9,44 @@ def executer_mission():
     twilio_number = os.environ.get("TWILIO_NUMBER")
     target_number = os.environ.get("TARGET_NUMBER")
     
-    # URL STABLE POUR AI STUDIO
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    # ON UTILISE LE MODÈLE QUE VOTRE SCAN (RUN 47) A CONFIRMÉ
+    # On passe par la v1beta car c'est la plus flexible pour AI Studio
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     
     payload = {
         "contents": [{
-            "parts": [{"text": "Tu es l'Aumônier Josué 1:8. Génère un message de motivation biblique puissant en FR, PT, et EN."}]
+            "parts": [{"text": "Message court Josué 1:8 en FR, EN, PT."}]
         }]
     }
 
-    print("🛰️ Connexion au canal AI Studio (Mode Stable)...")
+    print("🎯 Offensive sur Gemini 2.0 Flash (Confirmé par votre scan)...")
 
     try:
         response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, timeout=30)
         
-        # Si 404, on tente immédiatement la version "latest"
-        if response.status_code == 404:
-            print("🔄 Modèle standard non trouvé, tentative sur 'gemini-1.5-flash-latest'...")
-            url_alt = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
-            response = requests.post(url_alt, json=payload, headers={'Content-Type': 'application/json'}, timeout=30)
-
         if response.status_code == 200:
             message_ia = response.json()['candidates'][0]['content']['parts'][0]['text']
-            print("✅ RÉUSSITE TOTALE ! Message généré.")
+            print("✨ RÉUSSITE ! Réponse reçue de l'IA.")
             
             client = Client(twilio_sid, twilio_token)
             client.messages.create(body=message_ia, from_=twilio_number, to=target_number)
-            print(f"🏁 MISSION ACCOMPLIE : WhatsApp envoyé !")
+            print("🏁 TERMINÉ : Message envoyé sur WhatsApp !")
         else:
-            print(f"❌ Erreur finale ({response.status_code}) : {response.text}")
+            # Si le 2.0 flash échoue, on tente le 'gemini-2.0-flash-lite' (aussi dans votre liste)
+            print(f"⚠️ 2.0 Flash a échoué ({response.status_code}), repli sur 2.0 Flash Lite...")
+            url_lite = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={api_key}"
+            response_lite = requests.post(url_lite, json=payload, headers={'Content-Type': 'application/json'})
+            
+            if response_lite.status_code == 200:
+                message_ia = response_lite.json()['candidates'][0]['content']['parts'][0]['text']
+                client = Client(twilio_sid, twilio_token)
+                client.messages.create(body=message_ia, from_=twilio_number, to=target_number)
+                print("🏁 TERMINÉ (via Lite) : Message envoyé !")
+            else:
+                print(f"❌ Erreur persistante : {response_lite.text}")
             
     except Exception as e:
-        print(f"⚠️ Incident technique : {str(e)}")
+        print(f"⚠️ Incident : {str(e)}")
 
 if __name__ == "__main__":
     executer_mission()
